@@ -145,7 +145,7 @@
                                 android:scrollHorizontally="true"
                                 android:singleLine="true"
                                 android:textColor="@android:color/white"
-                                android:textSize="15sp"
+                                android:textSize="16sp"
                                 android:textStyle="bold"
                                 tools:ignore="RtlHardcoded"
                                 tools:text="The Video Title LONG very LONG" />
@@ -159,7 +159,7 @@
                                 android:marqueeRepeatLimit="marquee_forever"
                                 android:scrollHorizontally="true"
                                 android:singleLine="true"
-                                android:textColor="@android:color/white"
+                                android:textColor="@color/white_secondary"
                                 android:textSize="12sp"
                                 tools:text="The Video Artist  LONG very LONG very Long" />
 

@@ -183,6 +183,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (final Exception e) {
             ErrorUtil.showUiErrorSnackbar(this, "Setting up drawer", e);
         }
+        setupBottomNavigation();
         if (DeviceUtils.isTv(this)) {
             FocusOverlayView.setupFocusObserver(this);
         }
@@ -355,29 +356,36 @@ public class MainActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             case ITEM_ID_SUBSCRIPTIONS:
                 NavigationHelper.openSubscriptionFragment(getSupportFragmentManager());
+                setBottomNavChecked(R.id.nav_subscriptions);
                 break;
             case ITEM_ID_FEED:
                 NavigationHelper.openFeedFragment(getSupportFragmentManager());
+                setBottomNavChecked(-1);
                 break;
             case ITEM_ID_BOOKMARKS:
                 NavigationHelper.openBookmarksFragment(getSupportFragmentManager());
+                setBottomNavChecked(R.id.nav_library);
                 break;
             case ITEM_ID_DOWNLOADS:
                 NavigationHelper.openDownloads(this);
+                setBottomNavChecked(-1);
                 break;
             case ITEM_ID_HISTORY:
                 NavigationHelper.openStatisticFragment(getSupportFragmentManager());
+                setBottomNavChecked(-1);
                 break;
         }
     }
 
     private void kioskSelected(final MenuItem item) throws ExtractionException {
         final StreamingService currentService = ServiceHelper.getSelectedService(this);
+        final String defaultKioskId = currentService.getKioskList().getDefaultKioskId();
         int kioskMenuItemId = 0;
         for (final String kioskId : currentService.getKioskList().getAvailableKiosks()) {
             if (kioskMenuItemId == item.getItemId()) {
                 NavigationHelper.openKioskFragment(getSupportFragmentManager(),
                         currentService.getServiceId(), kioskId);
+                setBottomNavChecked(kioskId.equals(defaultKioskId) ? R.id.nav_trending : -1);
                 break;
             }
             kioskMenuItemId++;
@@ -413,6 +421,53 @@ public class MainActivity extends AppCompatActivity {
                     .getDimensionPixelSize(R.dimen.drawer_header_newpipe_title_default_width));
             drawerHeaderBinding.drawerHeaderNewpipeTitle.setMaxWidth(getResources()
                     .getDimensionPixelSize(R.dimen.drawer_header_newpipe_title_max_width));
+        }
+    }
+
+    private void setupBottomNavigation() {
+        if (DeviceUtils.isTv(this)) {
+            // Leanback uses the drawer for navigation; the touch bar would only waste space.
+            mainBinding.bottomNavigation.setVisibility(View.GONE);
+            // Reclaim the space reserved for the bar in activity_main.xml.
+            final ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)
+                    mainBinding.fragmentHolder.getLayoutParams();
+            params.bottomMargin = 0;
+            mainBinding.fragmentHolder.setLayoutParams(params);
+            return;
+        }
+        mainBinding.bottomNavigation.setOnItemSelectedListener(item -> {
+            final int itemId = item.getItemId();
+            if (itemId == R.id.nav_home) {
+                NavigationHelper.gotoMainFragment(getSupportFragmentManager());
+                return true;
+            } else if (itemId == R.id.nav_trending) {
+                openDefaultKiosk();
+                return true;
+            } else if (itemId == R.id.nav_subscriptions) {
+                NavigationHelper.openSubscriptionFragment(getSupportFragmentManager());
+                return true;
+            } else if (itemId == R.id.nav_library) {
+                NavigationHelper.openBookmarksFragment(getSupportFragmentManager());
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void openDefaultKiosk() {
+        try {
+            final StreamingService service = ServiceHelper.getSelectedService(this);
+            NavigationHelper.openKioskFragment(getSupportFragmentManager(),
+                    service.getServiceId(), service.getKioskList().getDefaultKioskId());
+        } catch (final Exception e) {
+            ErrorUtil.showUiErrorSnackbar(this, "Opening default kiosk", e);
+        }
+    }
+
+    private void setBottomNavChecked(final int itemId) {
+        final Menu menu = mainBinding.bottomNavigation.getMenu();
+        for (int i = 0; i < menu.size(); i++) {
+            menu.getItem(i).setChecked(menu.getItem(i).getItemId() == itemId);
         }
     }
 
@@ -796,6 +851,7 @@ public class MainActivity extends AppCompatActivity {
                 toolbarLayoutBinding.toolbar.setNavigationOnClickListener(v -> mainBinding.getRoot()
                         .open());
                 mainBinding.getRoot().setDrawerLockMode(DrawerLayout.LOCK_MODE_UNDEFINED);
+                setBottomNavChecked(R.id.nav_home);
             }
         } else {
             mainBinding.getRoot().setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);

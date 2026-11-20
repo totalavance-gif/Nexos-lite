@@ -848,4 +848,6 @@
     <string name="api23_requirement_dialog_blogpost">Artículo</string>
     <string name="channel_tab_podcasts">Podcasts</string>
     <string name="channel_tab_courses">Cursos</string>
+    <string name="bottom_nav_home">Inicio</string>
+    <string name="bottom_nav_library">Biblioteca</string>
 </resources>

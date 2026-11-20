@@ -3,7 +3,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="?attr/actionBarSize"
+    android:layout_height="match_parent"
+    android:layout_marginTop="@dimen/margin_small"
+    android:layout_marginBottom="@dimen/margin_small"
+    android:background="@drawable/toolbar_search_pill"
     tools:background="?attr/colorPrimary">
 
     <org.schabi.newpipe.views.NewPipeEditText
@@ -11,10 +14,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center_vertical"
-        android:layout_marginTop="4dp"
         android:layout_marginRight="48dp"
-        android:layout_marginBottom="4dp"
         android:background="@null"
+        android:paddingStart="16dp"
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:hint="@string/search"
@@ -29,7 +31,7 @@
     <FrameLayout
         android:id="@+id/toolbar_search_clear"
         android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_height="match_parent"
         android:layout_gravity="right|center_vertical"
         android:contentDescription="@string/clear"
         android:focusable="true"

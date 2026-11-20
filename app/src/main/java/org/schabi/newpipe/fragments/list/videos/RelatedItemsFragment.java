@@ -80,7 +80,7 @@ public class RelatedItemsFragment extends BaseListInfoFragment<InfoItem, Related
 
         final SharedPreferences pref = PreferenceManager
                 .getDefaultSharedPreferences(requireContext());
-        final boolean autoplay = pref.getBoolean(getString(R.string.auto_queue_key), false);
+        final boolean autoplay = pref.getBoolean(getString(R.string.auto_queue_key), true);
         headerBinding.autoplaySwitch.setChecked(autoplay);
         headerBinding.autoplaySwitch.setOnCheckedChangeListener((compoundButton, b) ->
                 PreferenceManager.getDefaultSharedPreferences(requireContext()).edit()
@@ -163,7 +163,8 @@ public class RelatedItemsFragment extends BaseListInfoFragment<InfoItem, Related
     public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences,
                                           final String key) {
         if (headerBinding != null && getString(R.string.auto_queue_key).equals(key)) {
-            headerBinding.autoplaySwitch.setChecked(sharedPreferences.getBoolean(key, false));
+            // Nexos Tube: reproducción continua activada por defecto.
+            headerBinding.autoplaySwitch.setChecked(sharedPreferences.getBoolean(key, true));
         }
     }
 
