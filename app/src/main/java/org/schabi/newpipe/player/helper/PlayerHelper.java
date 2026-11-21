@@ -298,7 +298,8 @@ public final class PlayerHelper {
     }
 
     public static long getPreferredCacheSize() {
-        return 64 * 1024 * 1024L;
+        // Nexos Tube: más caché en disco = re-ver y retroceder sin tirar de red.
+        return 256 * 1024 * 1024L;
     }
 
     public static long getPreferredFileSize() {
