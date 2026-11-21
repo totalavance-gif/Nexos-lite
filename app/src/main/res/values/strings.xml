@@ -541,6 +541,7 @@
     <string name="import_network_expensive_warning">Keep in mind this operation can be network expensive.\n\nDo you want to continue?</string>
     <!-- Playback Parameters -->
     <string name="playback_speed_control">Playback Speed Controls</string>
+    <string name="hold_for_double_speed">Playing at 2×, release to restore</string>
     <string name="playback_tempo">Tempo</string>
     <string name="playback_pitch">Pitch</string>
     <string name="unhook_checkbox">Unhook (may cause distortion)</string>

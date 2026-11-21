@@ -1040,6 +1040,14 @@ public class MainActivity extends AppCompatActivity {
                 || sheetState == BottomSheetBehavior.STATE_COLLAPSED;
     }
 
+    /**
+     * Collapse the player to its mini version (used by the swipe-down gesture).
+     */
+    public void collapsePlayer() {
+        BottomSheetBehavior.from(mainBinding.fragmentPlayerHolder)
+                .setState(BottomSheetBehavior.STATE_COLLAPSED);
+    }
+
     private void showKeepAndroidDialog() {
         final var prefs = PreferenceManager.getDefaultSharedPreferences(this);
         final var lastCheckKey = getString(R.string.kao_last_checked_key);

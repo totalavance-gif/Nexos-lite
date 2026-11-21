@@ -1,10 +1,12 @@
 package org.schabi.newpipe.player.gesture
 
 import android.util.Log
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnTouchListener
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.isVisible
@@ -30,12 +32,19 @@ class MainPlayerGestureListener(
     private val playerUi: MainPlayerUi
 ) : BasePlayerGestureListener(playerUi), OnTouchListener {
     private var isMoving = false
+    private var holdSpeedPrevious = 0f
+    private var isHoldSpeedActive = false
 
     override fun onTouch(v: View, event: MotionEvent): Boolean {
         super.onTouch(v, event)
         if (event.action == MotionEvent.ACTION_UP && isMoving) {
             isMoving = false
             onScrollEnd(event)
+        }
+        if ((event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL)
+            && isHoldSpeedActive
+        ) {
+            endHoldSpeed()
         }
         return when (event.action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
@@ -66,6 +75,63 @@ class MainPlayerGestureListener(
             onSingleTap()
         }
         return true
+    }
+
+    override fun onFling(
+        e1: MotionEvent?,
+        e2: MotionEvent,
+        velocityX: Float,
+        velocityY: Float
+    ): Boolean {
+        if (e1 == null || isDoubleTapping) {
+            return false
+        }
+        val distanceY = e2.y - e1.y
+        if (distanceY < FLING_MIN_DISTANCE_Y
+            || velocityY < FLING_MIN_VELOCITY_Y
+            || abs(velocityY) < abs(velocityX) * FLING_VERTICAL_FACTOR
+        ) {
+            return false
+        }
+        // Swipe down: exit fullscreen first, otherwise minimize to the mini player.
+        if (playerUi.isFullscreen) {
+            playerUi.toggleFullscreen()
+        } else {
+            playerUi.parentActivity.ifPresent { activity ->
+                (activity as? MainActivity)?.collapsePlayer()
+            }
+        }
+        return true
+    }
+
+    override fun onLongPress(e: MotionEvent) {
+        if (isDoubleTapping || isHoldSpeedActive || isMoving) {
+            return
+        }
+        if (player.currentState != Player.STATE_PLAYING
+            && player.currentState != Player.STATE_PAUSED
+        ) {
+            return
+        }
+        holdSpeedPrevious = player.playbackSpeed
+        if (holdSpeedPrevious == HOLD_SPEED) {
+            return
+        }
+        isHoldSpeedActive = true
+        player.playbackSpeed = HOLD_SPEED
+        binding.root.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        Toast.makeText(
+            player.context,
+            player.context.getString(R.string.hold_for_double_speed),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun endHoldSpeed() {
+        isHoldSpeedActive = false
+        if (!player.exoPlayerIsNull()) {
+            player.playbackSpeed = holdSpeedPrevious
+        }
     }
 
     private fun onScrollVolume(distanceY: Float) {
@@ -236,5 +302,9 @@ class MainPlayerGestureListener(
         private val TAG = MainPlayerGestureListener::class.java.simpleName
         private val DEBUG = MainActivity.DEBUG
         private const val MOVEMENT_THRESHOLD = 40
+        private const val FLING_MIN_DISTANCE_Y = 150f
+        private const val FLING_MIN_VELOCITY_Y = 1500f
+        private const val FLING_VERTICAL_FACTOR = 1.5f
+        private const val HOLD_SPEED = 2.0f
     }
 }
