@@ -39,9 +39,20 @@ echo "sdk.dir=/ruta/a/tu/Android-Sdk" > local.properties
 ./gradlew :app:assembleDebug
 ```
 
-## Traer cambios de upstream
+## Upstream (NewPipe)
+
+El fork vive de dos fuentes upstream:
+
+- **NewPipeExtractor** (librería, versión en `gradle/libs.versions.toml`): es
+  lo que habla con YouTube. Si YouTube cambia algo y los videos fallan, lo
+  normal es subir esta versión y soltar release. Urgente cuando rompe.
+- **NewPipe app** (`upstream/dev`): features y fixes. Se trae con merge cada
+  cierto tiempo; los conflictos suelen estar en archivos de marca.
 
 ```sh
 git fetch upstream
 git merge upstream/dev
 ```
+
+El workflow **Upstream check** (lunes + manual) abre un issue cuando hay
+extractor nuevo o commits pendientes, y lo cierra al ponerse al día.

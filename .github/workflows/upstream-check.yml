@@ -1,0 +1,77 @@
+name: Upstream check
+
+on:
+  schedule:
+    - cron: '17 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check NewPipeExtractor release
+        id: extractor
+        run: |
+          CURRENT=$(grep -oP 'teamnewpipe-newpipe-extractor = "\K[^"]+' \
+            gradle/libs.versions.toml)
+          LATEST=$(gh api repos/TeamNewPipe/NewPipeExtractor/releases/latest -q .tag_name)
+          echo "current=$CURRENT latest=$LATEST"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" = "$LATEST" ]; then
+            echo "behind=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "behind=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check upstream app commits
+        id: app
+        run: |
+          git remote add upstream https://github.com/TeamNewPipe/NewPipe.git 2>/dev/null || true
+          git fetch upstream dev --quiet
+          BEHIND=$(git rev-list --count HEAD..upstream/dev)
+          echo "upstream/dev is $BEHIND commits ahead"
+          echo "behind_count=$BEHIND" >> "$GITHUB_OUTPUT"
+
+      - name: Report extractor update
+        if: steps.extractor.outputs.behind == 'true'
+        run: |
+          TITLE="Upstream: actualizar NewPipeExtractor"
+          OPEN=$(gh issue list --search "$TITLE in:title" --state open \
+            --json number -q '.[].number')
+          if [ -z "$OPEN" ]; then
+            BODY="Tenemos ${{ steps.extractor.outputs.current }}, upstream va por ${{ steps.extractor.outputs.latest }}. Actualizar \`teamnewpipe-newpipe-extractor\` en \`gradle/libs.versions.toml\` y soltar release si YouTube falla."
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
+
+      - name: Report pending merge
+        if: steps.app.outputs.behind_count != '0'
+        run: |
+          TITLE="Upstream: merge pendiente de upstream/dev"
+          OPEN=$(gh issue list --search "$TITLE in:title" --state open \
+            --json number -q '.[].number')
+          if [ -z "$OPEN" ]; then
+            BODY="Hay ${{ steps.app.outputs.behind_count }} commits nuevos en upstream/dev. Merge: \`git fetch upstream && git merge upstream/dev\`, resolver conflictos de marca y verificar CI."
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
+
+      - name: Close resolved upstream reports
+        run: |
+          if [ "${{ steps.extractor.outputs.behind }}" != "true" ]; then
+            gh issue list --search "Upstream: actualizar NewPipeExtractor in:title" \
+              --state open --json number -q '.[].number' | xargs -r -n1 gh issue close
+          fi
+          if [ "${{ steps.app.outputs.behind_count }}" = "0" ]; then
+            gh issue list --search "Upstream: merge pendiente de upstream/dev in:title" \
+              --state open --json number -q '.[].number' | xargs -r -n1 gh issue close
+          fi
