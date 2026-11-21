@@ -11,10 +11,14 @@ import static org.schabi.newpipe.player.Player.STATE_COMPLETED;
 import static org.schabi.newpipe.player.Player.STATE_PAUSED;
 import static org.schabi.newpipe.player.Player.STATE_PAUSED_SEEK;
 import static org.schabi.newpipe.player.Player.STATE_PLAYING;
+import static org.schabi.newpipe.player.helper.PlayerHelper.AutoplayType.AUTOPLAY_TYPE_ALWAYS;
+import static org.schabi.newpipe.player.helper.PlayerHelper.AutoplayType.AUTOPLAY_TYPE_NEVER;
 import static org.schabi.newpipe.player.helper.PlayerHelper.formatSpeed;
+import static org.schabi.newpipe.player.helper.PlayerHelper.getAutoplayType;
 import static org.schabi.newpipe.player.helper.PlayerHelper.getTimeString;
 import static org.schabi.newpipe.player.helper.PlayerHelper.nextResizeModeAndSaveToPrefs;
 import static org.schabi.newpipe.player.helper.PlayerHelper.retrieveSeekDurationFromPreferences;
+import static org.schabi.newpipe.player.helper.PlayerHelper.setAutoplayType;
 
 import android.content.Intent;
 import android.content.res.Resources;
@@ -36,6 +40,7 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -223,6 +228,7 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
 
         binding.repeatButton.setOnClickListener(v -> onRepeatClicked());
         binding.shuffleButton.setOnClickListener(v -> onShuffleClicked());
+        binding.autoplayButton.setOnClickListener(v -> onAutoplayClicked());
 
         binding.playPauseButton.setOnClickListener(makeOnClickListener(player::playPause));
         binding.playPreviousButton.setOnClickListener(makeOnClickListener(player::playPrevious));
@@ -299,6 +305,7 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
 
         binding.repeatButton.setOnClickListener(null);
         binding.shuffleButton.setOnClickListener(null);
+        binding.autoplayButton.setOnClickListener(null);
 
         binding.playPauseButton.setOnClickListener(null);
         binding.playPreviousButton.setOnClickListener(null);
@@ -993,6 +1000,26 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
             Log.d(TAG, "onShuffleClicked() called");
         }
         player.toggleShuffleModeEnabled();
+    }
+
+    public void onAutoplayClicked() {
+        if (DEBUG) {
+            Log.d(TAG, "onAutoplayClicked() called");
+        }
+        final boolean enable = getAutoplayType(context) == AUTOPLAY_TYPE_NEVER;
+        setAutoplayType(context, enable ? AUTOPLAY_TYPE_ALWAYS : AUTOPLAY_TYPE_NEVER);
+        updateAutoplayButton();
+        Toast.makeText(context, context.getString(R.string.autoplay_title) + ": "
+                + context.getString(enable ? R.string.on : R.string.off),
+                Toast.LENGTH_SHORT).show();
+    }
+
+    protected void updateAutoplayButton() {
+        final boolean enabled = getAutoplayType(context) != AUTOPLAY_TYPE_NEVER;
+        binding.autoplayButton.setAlpha(enabled ? 1.0f : 0.35f);
+        binding.autoplayButton.setContentDescription(
+                context.getString(R.string.autoplay_title) + ": "
+                        + context.getString(enabled ? R.string.on : R.string.off));
     }
 
     @Override

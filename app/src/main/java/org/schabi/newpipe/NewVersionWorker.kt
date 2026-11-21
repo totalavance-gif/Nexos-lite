@@ -16,6 +16,7 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.grack.nanojson.JsonObject
 import com.grack.nanojson.JsonParser
 import com.grack.nanojson.JsonParserException
 import java.io.IOException
@@ -34,14 +35,14 @@ class NewVersionWorker(
      *
      * @param versionName    Name of new version
      * @param apkLocationUrl Url with the new apk
-     * @param versionCode    Code of new version
+     * @param isNewerVersionAvailable True if the latest version is newer than the installed one
      */
     private fun compareAppVersionAndShowNotification(
         versionName: String,
         apkLocationUrl: String?,
-        versionCode: Int
+        isNewerVersionAvailable: Boolean
     ) {
-        if (BuildConfig.VERSION_CODE >= versionCode) {
+        if (!isNewerVersionAvailable) {
             if (inputData.getBoolean(IS_MANUAL, false)) {
                 // Show toast stating that the app is up-to-date if the update check was manual.
                 ContextCompat.getMainExecutor(applicationContext).execute {
@@ -67,7 +68,7 @@ class NewVersionWorker(
         )
         val channelId = applicationContext.getString(R.string.app_update_notification_channel_id)
         val notificationBuilder = NotificationCompat.Builder(applicationContext, channelId)
-            .setSmallIcon(R.drawable.ic_newpipe_update)
+            .setSmallIcon(R.drawable.ic_nexos_update)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
@@ -104,8 +105,8 @@ class NewVersionWorker(
             }
         }
 
-        // Make a network request to get latest NewPipe data.
-        val response = DownloaderImpl.getInstance().get(NEWPIPE_API_URL)
+        // Make a network request to get latest Nexos Tube release data.
+        val response = DownloaderImpl.getInstance().get(NEXOS_RELEASES_API_URL)
         handleResponse(response)
     }
 
@@ -126,29 +127,55 @@ class NewVersionWorker(
 
         // Parse the json from the response.
         try {
-            val newpipeVersionInfo = JsonParser.`object`()
-                .from(response.responseBody()).getObject("flavors")
-                .getObject("newpipe")
-
-            val versionName = newpipeVersionInfo.getString("version")
-            val versionCode = newpipeVersionInfo.getInt("version_code")
-            val apkLocationUrl = newpipeVersionInfo.getString("apk")
-            compareAppVersionAndShowNotification(versionName, apkLocationUrl, versionCode)
+            val latestRelease = JsonParser.`object`().from(response.responseBody())
+            val versionName = latestRelease.getString("tag_name")?.removePrefix("v") ?: return
+            val apkLocationUrl = findReleaseApkUrl(latestRelease, versionName)
+            val isNewer = compareVersionNames(versionName, BuildConfig.VERSION_NAME) > 0
+            compareAppVersionAndShowNotification(versionName, apkLocationUrl, isNewer)
         } catch (e: JsonParserException) {
-            // Most likely something is wrong in data received from NEWPIPE_API_URL.
+            // Most likely something is wrong in data received from NEXOS_RELEASES_API_URL.
             // Do not alarm user and fail silently.
             if (DEBUG) {
-                Log.w(TAG, "Could not get NewPipe API: invalid json", e)
+                Log.w(TAG, "Could not get Nexos releases API: invalid json", e)
             }
         }
     }
+
+    /**
+     * Find the APK download url inside a GitHub release object, falling back to the
+     * release page itself when the expected asset is missing.
+     */
+    private fun findReleaseApkUrl(
+        latestRelease: JsonObject,
+        versionName: String
+    ): String? {
+        val assets = latestRelease.getArray("assets")
+        if (assets != null) {
+            for (i in 0 until assets.size) {
+                val asset = assets.getObject(i)
+                val name = asset.getString("name") ?: ""
+                if (name == "NexosTube_v$versionName.apk") {
+                    return asset.getString("browser_download_url")
+                }
+            }
+        }
+        return latestRelease.getString("html_url")
+    }
+
+    /**
+     * Compare two dot-separated version names numerically, part by part.
+     *
+     * @return Negative if [latest] is older, zero if equal, positive if [latest] is newer
+     */
+    private fun compareVersionNames(latest: String, current: String): Int =
+        ReleaseVersionUtil.compareVersionNames(latest, current)
 
     override fun doWork(): Result {
         return try {
             checkNewVersion()
             Result.success()
         } catch (e: IOException) {
-            Log.w(TAG, "Could not fetch NewPipe API: probably network problem", e)
+            Log.w(TAG, "Could not fetch Nexos releases API: probably network problem", e)
             Result.failure()
         } catch (e: ReCaptchaException) {
             Log.e(TAG, "ReCaptchaException should never happen here.", e)
@@ -159,17 +186,19 @@ class NewVersionWorker(
     companion object {
         private val DEBUG = MainActivity.DEBUG
         private val TAG = NewVersionWorker::class.java.simpleName
-        private const val NEWPIPE_API_URL = "https://newpipe.net/api/data.json"
+        private const val NEXOS_RELEASES_API_URL =
+            "https://api.github.com/repos/totalavance-gif/Nexos-lite/releases/latest"
         private const val IS_MANUAL = "isManual"
 
         /**
          * Start a new worker which checks if all conditions for performing a version check are met,
-         * fetches the API endpoint [.NEWPIPE_API_URL] containing info about the latest NewPipe
-         * version and displays a notification about an available update if one is available.
+         * fetches the API endpoint [.NEXOS_RELEASES_API_URL] containing info about the latest
+         * Nexos Tube version and displays a notification about an available update if one is
+         * available.
          * <br></br>
          * Following conditions need to be met, before data is requested from the server:
          *
-         *  *  The app is signed with the correct signing key (by TeamNewPipe / schabi).
+         *  *  The app is signed with the correct signing key (the Nexos Tube release key).
          * If the signing key differs from the one used upstream, the update cannot be installed.
          *  * The user enabled searching for and notifying about updates in the settings.
          *  * The app did not recently check for updates.

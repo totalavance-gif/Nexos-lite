@@ -265,6 +265,21 @@ public final class PlayerHelper {
         }
     }
 
+    public static void setAutoplayType(@NonNull final Context context,
+                                       @AutoplayType final int type) {
+        final String value;
+        if (type == AUTOPLAY_TYPE_ALWAYS) {
+            value = context.getString(R.string.autoplay_always_key);
+        } else if (type == AUTOPLAY_TYPE_WIFI) {
+            value = context.getString(R.string.autoplay_wifi_key);
+        } else {
+            value = context.getString(R.string.autoplay_never_key);
+        }
+        getPreferences(context).edit()
+                .putString(context.getString(R.string.autoplay_key), value)
+                .apply();
+    }
+
     public static boolean isAutoplayAllowedByUser(@NonNull final Context context) {
         switch (PlayerHelper.getAutoplayType(context)) {
             case PlayerHelper.AutoplayType.AUTOPLAY_TYPE_NEVER:

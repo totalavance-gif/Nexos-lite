@@ -31,7 +31,25 @@ kotlin {
     jvmToolchain(21)
 }
 
+// Firma release de Nexos Tube vía variables de entorno (las inyecta el CI
+// desde los secrets). Sin keystore el release sale sin firmar: no rompe builds locales.
+val nexosKeystoreFile = System.getenv("NEXOS_KEYSTORE_PATH")
+    ?.takeIf { it.isNotEmpty() }
+    ?.let { rootProject.file(it) }
+    ?.takeIf { it.exists() }
+
 configure<ApplicationExtension> {
+    signingConfigs {
+        create("nexosRelease") {
+            nexosKeystoreFile?.let {
+                storeFile = it
+                storePassword = System.getenv("NEXOS_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("NEXOS_KEY_ALIAS")
+                keyPassword = System.getenv("NEXOS_KEY_PASSWORD")
+            }
+        }
+    }
+
     compileSdk {
         version = release(NEWPIPE_VERSION_SDK_COMPILE_MAJOR) {
             minorApiLevel = NEWPIPE_VERSION_SDK_COMPILE_MINOR
@@ -49,9 +67,9 @@ configure<ApplicationExtension> {
             version = release(NEWPIPE_VERSION_SDK_TARGET)
         }
 
-        versionCode = System.getProperty("versionCodeOverride")?.toInt() ?: NEWPIPE_VERSION_CODE
+        versionCode = System.getProperty("versionCodeOverride")?.toInt() ?: NEXOS_VERSION_CODE
 
-        versionName = NEWPIPE_VERSION_NAME
+        versionName = System.getProperty("versionNameOverride") ?: NEXOS_VERSION_NAME
         System.getProperty("versionNameSuffix")?.let { versionNameSuffix = it }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -72,6 +90,9 @@ configure<ApplicationExtension> {
         }
 
         release {
+            if (nexosKeystoreFile != null) {
+                signingConfig = signingConfigs.getByName("nexosRelease")
+            }
             System.getProperty("packageSuffix")?.let { suffix ->
                 applicationIdSuffix = suffix
                 resValue("string", "app_name", "Nexos Tube $suffix")

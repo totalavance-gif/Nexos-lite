@@ -3,13 +3,16 @@
   ~ SPDX-FileCopyrightText: 2026 NewPipe e.V. <https://newpipe-ev.de>
   ~ SPDX-License-Identifier: GPL-3.0-or-later
   -->
+<!-- Nexos Tube: insignia roja + play (el fondo circular lo pone el tema). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="470dp"
     android:height="464dp"
     android:viewportWidth="470"
     android:viewportHeight="464">
     <path
-        android:pathData="M144.1,388.93L191.69,358.59L192.69,157.51L315.15,230.22L226.54,281.32V339.8L410.63,230.22L143.85,73.44L144.1,388.93Z"
-        android:fillColor="#ffffff"
-        android:fillType="evenOdd"/>
+        android:pathData="M175,150 H295 Q340,150 340,195 V270 Q340,315 295,315 H175 Q130,315 130,270 V195 Q130,150 175,150 Z"
+        android:fillColor="#E53935" />
+    <path
+        android:pathData="M205,182 L300,232 L205,283 Z"
+        android:fillColor="#ffffff" />
 </vector>

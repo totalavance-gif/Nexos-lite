@@ -15,6 +15,21 @@ Cada push a `main` compila y publica el APK debug:
 
 Si un build falla, el workflow abre un issue con el extracto del log.
 
+## Releases firmados
+
+Los tags `v*` disparan el workflow **Release APK**: compila el release,
+lo firma con el keystore de los secrets, verifica la firma y lo publica en
+**Releases** con descarga directa. La app avisa de nuevas versiones sola.
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Secrets necesarios (`Settings → Secrets → Actions`): `NEXOS_KEYSTORE_BASE64`,
+`NEXOS_KEYSTORE_PASSWORD`, `NEXOS_KEY_ALIAS`, `NEXOS_KEY_PASSWORD`.
+El keystore vive fuera del repo, con copia de seguridad.
+
 ## Compilar en local
 
 Requisitos: JDK 21 + Android SDK con `compileSdk 37`.

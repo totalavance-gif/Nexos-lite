@@ -1,0 +1,102 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      NEXOS_KEYSTORE_PATH: ${{ github.workspace }}/nexos-release.jks
+      NEXOS_KEYSTORE_PASSWORD: ${{ secrets.NEXOS_KEYSTORE_PASSWORD }}
+      NEXOS_KEY_ALIAS: ${{ secrets.NEXOS_KEY_ALIAS }}
+      NEXOS_KEY_PASSWORD: ${{ secrets.NEXOS_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Restore release keystore
+        run: |
+          if [ -z "${{ secrets.NEXOS_KEYSTORE_BASE64 }}" ]; then
+            echo '::error::Falta el secret NEXOS_KEYSTORE_BASE64'
+            exit 1
+          fi
+          echo '${{ secrets.NEXOS_KEYSTORE_BASE64 }}' | base64 -d > "$NEXOS_KEYSTORE_PATH"
+
+      - name: Build signed release APK
+        run: |
+          set -o pipefail
+          EXTRA_ARGS=()
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            EXTRA_ARGS+=("-DversionNameOverride=${GITHUB_REF_NAME#v}")
+            EXTRA_ARGS+=("-DversionCodeOverride=$GITHUB_RUN_NUMBER")
+          fi
+          ./gradlew :app:assembleRelease --stacktrace \
+            -DskipFormatKtlint "${EXTRA_ARGS[@]}" 2>&1 | tee build.log
+
+      - name: Verify signature and rename APK
+        run: |
+          APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1)
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          "$APKSIGNER" verify --print-certs "$APK" | head -n 5
+          VERSION_NAME="$(jq -r '.elements[0].versionName' 'app/build/outputs/apk/release/output-metadata.json')"
+          mv "$APK" "app/build/outputs/apk/release/NexosTube_v$VERSION_NAME.apk"
+          echo "APK: NexosTube_v$VERSION_NAME.apk" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report failure log
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo 'Release APK failed, see tail of the log:'
+            echo '```'
+            tail -c 25000 build.log 2>/dev/null || echo '(sin build.log)'
+            echo '```'
+          } > failure-report.md
+          gh issue create --title "CI failure: Release APK" --body-file failure-report.md
+
+      - name: Publish GitHub Release
+        if: success() && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          APK=app/build/outputs/apk/release/NexosTube_v*.apk
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" --clobber $APK
+          else
+            gh release create "$TAG" --title "Nexos Tube $TAG" \
+              --notes "APK release firmado. Descarga directa, sin login." $APK
+          fi
+
+      - name: Upload signed APK artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: app/build/outputs/apk/release/NexosTube_v*.apk
+          if-no-files-found: error
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-logs
+          path: build.log
+          if-no-files-found: warn

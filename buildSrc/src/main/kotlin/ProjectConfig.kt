@@ -17,3 +17,7 @@ const val NEWPIPE_APPLICATION_ID_NEW = "net.newpipe.app"
 // Fork Nexos Tube: solo cambia el applicationId (identidad instalable).
 // El namespace se conserva para no mover BuildConfig/R del código.
 const val NEXOS_APPLICATION_ID = "com.nexos.tube"
+
+// Versionado propio del fork (independiente del upstream).
+const val NEXOS_VERSION_CODE = 1
+const val NEXOS_VERSION_NAME = "1.0.0"

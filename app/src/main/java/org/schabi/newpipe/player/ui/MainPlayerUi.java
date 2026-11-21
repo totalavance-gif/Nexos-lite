@@ -635,7 +635,9 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
         binding.itemsListHeaderDuration.setVisibility(View.VISIBLE);
         binding.shuffleButton.setVisibility(View.VISIBLE);
         binding.repeatButton.setVisibility(View.VISIBLE);
+        binding.autoplayButton.setVisibility(View.VISIBLE);
         binding.addToPlaylistButton.setVisibility(View.VISIBLE);
+        updateAutoplayButton();
 
         hideControls(0, 0);
         binding.itemsListPanel.requestFocus();
@@ -676,6 +678,7 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
         binding.itemsListHeaderDuration.setVisibility(View.GONE);
         binding.shuffleButton.setVisibility(View.GONE);
         binding.repeatButton.setVisibility(View.GONE);
+        binding.autoplayButton.setVisibility(View.GONE);
         binding.addToPlaylistButton.setVisibility(View.GONE);
 
         hideControls(0, 0);
@@ -703,6 +706,7 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
 
         binding.shuffleButton.setVisibility(View.GONE);
         binding.repeatButton.setVisibility(View.GONE);
+        binding.autoplayButton.setVisibility(View.GONE);
         binding.addToPlaylistButton.setVisibility(View.GONE);
         binding.itemsListClose.setOnClickListener(view -> closeItemsList());
     }
